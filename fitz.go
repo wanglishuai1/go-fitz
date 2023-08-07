@@ -569,3 +569,28 @@ func (f *Document) Close() error {
 
 	return nil
 }
+func (f *Document) GetImage(pageNumber int) bool {
+	f.mtx.Lock()
+	defer f.mtx.Unlock()
+
+	if pageNumber >= f.NumPage() {
+		return false
+	}
+
+	page := C.fz_load_page(f.ctx, f.doc, C.int(pageNumber))
+	defer C.fz_drop_page(f.ctx, page)
+
+	var bbox C.fz_rect
+	C.fz_bound_page(f.ctx, page, &bbox)
+
+	var dev C.z_device = C.fz_new_bbox_device(f.ctx, &bbox)
+	C.fz_run_page(f.ctx, page, dev, &C.fz_identity, nil)
+	C.fz_close_device(f.ctx, dev)
+
+	var bb C.fz_bbox = C.fz_bound_device_bbox(f.ctx, dev)
+	print(bb)
+
+	C.fz_drop_bbox(f.ctx, bb)
+	C.fz_drop_device(f.ctx, dev)
+	return true
+}
